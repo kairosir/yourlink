@@ -19,8 +19,14 @@ type GuideCard = {
   id: string
   title: string
   description: string
+  summary: string
+  outcome: string
   checklist: string[]
+  materials: string[]
+  steps: { title: string; body: string }[]
   templates: string[]
+  imageTitle: string
+  imageCaption: string
 }
 
 type TopicBranch = {
@@ -234,6 +240,10 @@ function topicHref(moduleId: string, topicId: string) {
   return `/module/${moduleId}/topic/${topicId}`
 }
 
+function guideHref(moduleId: string, topicId: string, guideId: string) {
+  return `/module/${moduleId}/topic/${topicId}/guide/${guideId}`
+}
+
 function searchHref(query: string, filter: SearchKind = 'all') {
   const params = new URLSearchParams()
   if (query) params.set('q', query)
@@ -245,7 +255,9 @@ function buildGuides(module: ModuleCard, branch: TopicBranch): GuideCard[] {
   return branch.items.map((item, index) => ({
     id: `${branch.id}-${index}`,
     title: item,
-    description: `${module.title}: ${branch.title}. Готовая карточка с последовательностью действий, быстрым чек-листом и шаблонами для старта без пустого экрана.`,
+    description: `${module.title}: ${branch.title}. Полная инструкция с логикой подготовки, порядком действий и готовыми шаблонами.`,
+    summary: `Эта инструкция помогает пройти тему «${item}» без хаоса: сначала подготовка, затем базовая реализация, проверка результата и фиксация следующего шага.`,
+    outcome: `На выходе у пользователя есть понятный результат по теме «${item}», список действий и готовая структура для повторения сценария в будущем.`,
     checklist: [
       `Определи точную цель по теме «${item}»`,
       `Собери исходные данные и ограничения`,
@@ -253,11 +265,36 @@ function buildGuides(module: ModuleCard, branch: TopicBranch): GuideCard[] {
       `Проверь риски, сроки и нужные ресурсы`,
       `Зафиксируй результат и следующий шаг`,
     ],
+    materials: [
+      `Базовая информация по теме «${item}»`,
+      `Любые исходные документы, заметки или цифры`,
+      `15-30 минут на первичную настройку`,
+    ],
+    steps: [
+      {
+        title: 'Подготовка контекста',
+        body: `Сначала зафиксируй, зачем тебе нужен сценарий «${item}», какие есть ограничения и что уже готово. Это убирает лишние действия и помогает не расползаться по смежным задачам.`,
+      },
+      {
+        title: 'Сбор ключевых данных',
+        body: `Собери минимальный набор данных, без которых нельзя двигаться дальше: цифры, сроки, документы, ссылки, прошлый опыт или текущие проблемы. Если чего-то не хватает, выпиши это отдельным коротким списком.`,
+      },
+      {
+        title: 'Запуск базового решения',
+        body: `Сделай первую рабочую версию без перфекционизма. Для темы «${item}» важнее получить действующий черновик, чем пытаться сразу собрать идеальную систему.`,
+      },
+      {
+        title: 'Проверка и улучшение',
+        body: `Проверь, что решение действительно работает в жизни: удобно ли им пользоваться, хватает ли информации, нет ли слабых мест. После этого улучши только 1-2 самых заметных участка.`,
+      },
+    ],
     templates: [
       `Шаблон плана: ${item}`,
       `Чек-лист подготовки: ${branch.title}`,
       `Краткий сценарий действий на 15 минут`,
     ],
+    imageTitle: `Визуальная схема: ${item}`,
+    imageCaption: `Иллюстрация показывает поток «подготовка → действие → проверка → результат» для темы «${item}».`,
   }))
 }
 
@@ -267,6 +304,24 @@ function findModule(moduleId?: string) {
 
 function findTopic(module: ModuleCard | undefined, topicId?: string) {
   return module?.branches.find((branch) => branch.id === topicId)
+}
+
+function findGuide(module: ModuleCard | undefined, topic: TopicBranch | undefined, guideId?: string) {
+  if (!module || !topic) return undefined
+  return buildGuides(module, topic).find((guide) => guide.id === guideId)
+}
+
+function Breadcrumbs({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav className="breadcrumbs" aria-label="Хлебные крошки">
+      {items.map((item, index) => (
+        <span key={`${item.label}-${index}`} className="breadcrumbs__item">
+          {item.href ? <Link to={item.href}>{item.label}</Link> : <span>{item.label}</span>}
+          {index < items.length - 1 ? <span className="breadcrumbs__sep">/</span> : null}
+        </span>
+      ))}
+    </nav>
+  )
 }
 
 function buildSearchIndex(): SearchResult[] {
@@ -293,7 +348,7 @@ function buildSearchIndex(): SearchResult[] {
         kind: 'guide' as const,
         title: guide.title,
         subtitle: `${module.title} • ${branch.title}`,
-        href: topicHref(module.id, branch.id),
+        href: guideHref(module.id, branch.id, guide.id),
       }))
 
       return [topicResult, ...guideResults]
@@ -398,9 +453,7 @@ function ModulePage() {
   return (
     <section className="page-shell">
       <div className={`page-hero ${module.id}`}>
-        <Link to="/" className="back-link">
-          ← Назад на главную
-        </Link>
+        <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: module.title }]} />
         <p className="eyebrow">Раздел</p>
         <h2>{module.title}</h2>
         <p>{module.prompt}</p>
@@ -440,22 +493,21 @@ function TopicPage() {
   return (
     <section className="page-shell">
       <div className={`page-hero ${module.id}`}>
-        <div className="page-hero__breadcrumbs">
-          <Link to="/" className="back-link">
-            Главная
-          </Link>
-          <Link to={moduleHref(module.id)} className="back-link">
-            {module.title}
-          </Link>
-        </div>
+        <Breadcrumbs
+          items={[
+            { label: 'Главная', href: '/' },
+            { label: module.title, href: moduleHref(module.id) },
+            { label: topic.title },
+          ]}
+        />
         <p className="eyebrow">Подтема</p>
         <h2>{topic.title}</h2>
-        <p>{topic.subtitle}. Ниже уже не список веток, а готовые карточки-инструкции и шаблоны.</p>
+        <p>{topic.subtitle}. Ниже каталог отдельных инструкций. Клик по любой карточке открывает полноценную страницу с детальным разбором.</p>
       </div>
 
       <div className="guide-grid">
         {guides.map((guide) => (
-          <article key={guide.id} className={`guide-card ${module.id}`}>
+          <Link key={guide.id} to={guideHref(module.id, topic.id, guide.id)} className={`guide-card ${module.id}`}>
             <div className="guide-card__head">
               <span className="guide-card__eyebrow">Инструкция</span>
               <h3>{guide.title}</h3>
@@ -463,25 +515,118 @@ function TopicPage() {
             </div>
 
             <div className="guide-card__section">
-              <strong>Чек-лист</strong>
-              <ul>
-                {guide.checklist.map((step) => (
-                  <li key={slugify(step)}>{step}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="guide-card__section">
-              <strong>Шаблоны</strong>
+              <strong>Что внутри</strong>
               <div className="guide-card__templates">
-                {guide.templates.map((template) => (
-                  <span key={template}>{template}</span>
-                ))}
+                <span>Полная страница</span>
+                <span>Пошаговый план</span>
+                <span>Шаблоны и чек-листы</span>
               </div>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
+    </section>
+  )
+}
+
+function GuidePage() {
+  const { moduleId, topicId, guideId } = useParams()
+  const module = findModule(moduleId)
+  const topic = findTopic(module, topicId)
+  const guide = findGuide(module, topic, guideId)
+
+  if (!module || !topic || !guide) {
+    return <Navigate to={topicId && module ? topicHref(module.id, topicId) : module ? moduleHref(module.id) : '/'} replace />
+  }
+
+  return (
+    <section className="page-shell">
+      <div className={`page-hero ${module.id}`}>
+        <Breadcrumbs
+          items={[
+            { label: 'Главная', href: '/' },
+            { label: module.title, href: moduleHref(module.id) },
+            { label: topic.title, href: topicHref(module.id, topic.id) },
+            { label: guide.title },
+          ]}
+        />
+        <p className="eyebrow">Полная инструкция</p>
+        <h2>{guide.title}</h2>
+        <p>{guide.summary}</p>
+      </div>
+
+      <section className="instruction-layout">
+        <article className={`instruction-page ${module.id}`}>
+          <div className="instruction-page__hero">
+            <div>
+              <span className="guide-card__eyebrow">Подробный разбор</span>
+              <h3>{guide.imageTitle}</h3>
+              <p>{guide.imageCaption}</p>
+            </div>
+            <div className="instruction-visual" aria-hidden="true">
+              <div className="instruction-visual__frame">
+                <div className="instruction-visual__orbit instruction-visual__orbit--one" />
+                <div className="instruction-visual__orbit instruction-visual__orbit--two" />
+                <div className="instruction-visual__card">Start</div>
+                <div className="instruction-visual__card">Build</div>
+                <div className="instruction-visual__card">Check</div>
+                <div className="instruction-visual__card">Done</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="instruction-page__content">
+            <section className="instruction-section">
+              <h3>Что получится в итоге</h3>
+              <p>{guide.outcome}</p>
+            </section>
+
+            <section className="instruction-section">
+              <h3>Что подготовить заранее</h3>
+              <ul>
+                {guide.materials.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="instruction-section">
+              <h3>Пошаговая инструкция</h3>
+              <div className="instruction-steps">
+                {guide.steps.map((step, index) => (
+                  <article key={step.title} className="instruction-step">
+                    <span className="instruction-step__number">{index + 1}</span>
+                    <div>
+                      <h4>{step.title}</h4>
+                      <p>{step.body}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        </article>
+
+        <aside className="instruction-sidebar">
+          <section className="instruction-sidecard">
+            <h3>Быстрый чек-лист</h3>
+            <ul>
+              {guide.checklist.map((step) => (
+                <li key={slugify(step)}>{step}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="instruction-sidecard">
+            <h3>Шаблоны</h3>
+            <div className="guide-card__templates">
+              {guide.templates.map((template) => (
+                <span key={template}>{template}</span>
+              ))}
+            </div>
+          </section>
+        </aside>
+      </section>
     </section>
   )
 }
@@ -495,9 +640,7 @@ function SearchPage({ searchIndex }: { searchIndex: SearchResult[] }) {
   return (
     <section className="page-shell">
       <div className="page-hero search-page-hero">
-        <Link to="/" className="back-link">
-          ← На главную
-        </Link>
+        <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Поиск' }]} />
         <p className="eyebrow">Поиск</p>
         <h2>Результаты по сайту</h2>
         <p>
@@ -685,6 +828,7 @@ function AppShell() {
           <Route path="/" element={<HomePage />} />
           <Route path="/module/:moduleId" element={<ModulePage />} />
           <Route path="/module/:moduleId/topic/:topicId" element={<TopicPage />} />
+          <Route path="/module/:moduleId/topic/:topicId/guide/:guideId" element={<GuidePage />} />
           <Route path="/search" element={<SearchPage searchIndex={searchIndex} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
