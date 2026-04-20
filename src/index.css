@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bg:
+    radial-gradient(circle at top left, rgba(10, 132, 255, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(0, 196, 180, 0.12), transparent 22%),
+    linear-gradient(180deg, #f5fbff 0%, #eef7f8 38%, #f9fafb 100%);
+  --panel: rgba(255, 255, 255, 0.58);
+  --panel-strong: rgba(255, 255, 255, 0.7);
+  --border: rgba(120, 145, 179, 0.18);
+  --text-color: #445168;
+  --text-strong: #0c1b33;
+  --muted: #6c7a90;
+  --muted-strong: #55657e;
+  --shadow-soft:
+    0 24px 60px rgba(23, 41, 74, 0.1),
+    0 6px 18px rgba(23, 41, 74, 0.05);
+  background: #f3f8fb;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg:
+    radial-gradient(circle at top left, rgba(32, 111, 255, 0.22), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(0, 196, 180, 0.12), transparent 24%),
+    linear-gradient(180deg, #07111f 0%, #0a1224 40%, #10192e 100%);
+  --panel: rgba(15, 25, 44, 0.68);
+  --panel-strong: rgba(13, 23, 42, 0.76);
+  --border: rgba(123, 158, 216, 0.18);
+  --text-color: #afbdd5;
+  --text-strong: #f3f7ff;
+  --muted: #8fa2c3;
+  --muted-strong: #b4c3dc;
+  --shadow-soft:
+    0 26px 70px rgba(0, 0, 0, 0.34),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+  background: #08101c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-color);
+  background: var(--bg);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)),
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.18), transparent 18%);
+  opacity: 0.8;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
