@@ -1,10 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import './App.css'
 
 type ThemeMode = 'light' | 'dark'
+type ViewMode = 'home' | 'module' | 'topic'
+
+type GuideCard = {
+  id: string
+  title: string
+  description: string
+  checklist: string[]
+  templates: string[]
+}
 
 type TopicBranch = {
+  id: string
   title: string
   subtitle: string
   items: string[]
@@ -21,6 +31,16 @@ type ModuleCard = {
   prompt: string
   icon: ReactNode
   branches: TopicBranch[]
+}
+
+type SearchResult = {
+  id: string
+  kind: 'module' | 'topic' | 'guide'
+  title: string
+  subtitle: string
+  moduleId: string
+  topicId?: string
+  guideId?: string
 }
 
 function IconShell({ children }: { children: ReactNode }) {
@@ -59,21 +79,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'budget',
         title: 'Личный бюджет',
         subtitle: 'Повседневные деньги и расходы',
         items: ['План бюджета на месяц', 'Учет трат по категориям', 'Подушка безопасности', 'Как сократить импульсные покупки'],
       },
       {
+        id: 'debts',
         title: 'Кредиты и долги',
         subtitle: 'Нагрузка, ставки и реструктуризация',
         items: ['Как закрывать долги по приоритету', 'Сравнение кредитов', 'Рефинансирование', 'Переговоры с банком'],
       },
       {
+        id: 'invest',
         title: 'Инвестиции',
         subtitle: 'Старт, риск и долгий горизонт',
         items: ['С чего начать инвестирование', 'Распределение портфеля', 'Риски и диверсификация', 'Инвестиции под цель'],
       },
       {
+        id: 'income',
         title: 'Доход и цели',
         subtitle: 'Финансовые планы под жизнь',
         items: ['Накопить на переезд', 'План на крупную покупку', 'Рост дохода', 'Резерв на нестабильные месяцы'],
@@ -98,21 +122,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'job-search',
         title: 'Поиск работы',
         subtitle: 'Вакансии и стратегия откликов',
         items: ['Как искать вакансии точечно', 'План откликов на 2 недели', 'Что писать в сопроводительном письме', 'Как анализировать требования вакансии'],
       },
       {
+        id: 'resume',
         title: 'Резюме и профиль',
         subtitle: 'Упаковка опыта',
         items: ['Резюме без опыта', 'Резюме для смены сферы', 'Оформление достижений', 'Прокачка LinkedIn и HH'],
       },
       {
+        id: 'interviews',
         title: 'Собеседования',
         subtitle: 'Подготовка и уверенность',
         items: ['Ответы на сложные вопросы', 'Разбор кейсов', 'Техническое интервью', 'Поведение на финальном этапе'],
       },
       {
+        id: 'growth',
         title: 'Рост и переговоры',
         subtitle: 'Повышение, деньги, переходы',
         items: ['Как просить повышение', 'Переговоры по офферу', 'План развития на квартал', 'Когда менять компанию'],
@@ -137,21 +165,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'exams',
         title: 'Экзамены',
         subtitle: 'ЕНТ, ЕГЭ и вступительные',
         items: ['План подготовки на 90 дней', 'Как повторять без выгорания', 'Разбор слабых тем', 'Тренировочные варианты и тайминг'],
       },
       {
+        id: 'courses',
         title: 'Курсы и самообучение',
         subtitle: 'Освоение новой области',
         items: ['Как выбрать курс', 'Путь с нуля в новую профессию', 'Как не бросить обучение', 'Система заметок и конспектов'],
       },
       {
+        id: 'skills',
         title: 'Навыки',
         subtitle: 'Практика и закрепление',
         items: ['Английский по уровням', 'Цифровые навыки', 'Soft skills', 'Портфолио через мини-проекты'],
       },
       {
+        id: 'study-system',
         title: 'Учебная система',
         subtitle: 'Дисциплина и организация',
         items: ['План недели для учебы', 'Как совмещать работу и обучение', 'Методы запоминания', 'Подготовка к дедлайнам и сессии'],
@@ -177,21 +209,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'repair',
         title: 'Ремонт',
         subtitle: 'Поломки и мелкие работы',
         items: ['Как починить кран', 'Электрика: базовая безопасность', 'Мелкий ремонт мебели', 'Список инструментов для дома'],
       },
       {
+        id: 'docs',
         title: 'Документы',
         subtitle: 'Справки, формы и процедуры',
         items: ['Какие документы нужны для разных задач', 'Проверка сроков и копий', 'Как собрать пакет документов', 'Цифровой архив дома'],
       },
       {
+        id: 'routine',
         title: 'Организация быта',
         subtitle: 'Рутина и порядок',
         items: ['План уборки', 'Покупки на неделю', 'Семейный календарь дел', 'Антикризисный домашний чек-лист'],
       },
       {
+        id: 'moving',
         title: 'Переезд и жилье',
         subtitle: 'Подготовка и контроль',
         items: ['Чек-лист переезда', 'Как выбрать аренду', 'Переезд без хаоса', 'Обязательные мелочи после заселения'],
@@ -216,21 +252,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'stress',
         title: 'Эмоции и стресс',
         subtitle: 'Саморегуляция и устойчивость',
         items: ['Что делать при перегрузе', 'Техники заземления', 'Как проживать стресс', 'Мини-ритуалы восстановления'],
       },
       {
+        id: 'sleep',
         title: 'Сон и энергия',
         subtitle: 'Режим и восстановление',
         items: ['Гигиена сна', 'Как восстановиться после бессонницы', 'Утренний запуск', 'Энергия без хаотичного режима'],
       },
       {
+        id: 'borders',
         title: 'Границы',
         subtitle: 'Люди и личное пространство',
         items: ['Как говорить нет', 'Сложные разговоры спокойно', 'Снижение эмоциональной нагрузки', 'Перестать брать лишнее на себя'],
       },
       {
+        id: 'mindfulness',
         title: 'Осознанность',
         subtitle: 'Рефлексия и баланс',
         items: ['Ведение дневника', 'Базовые медитации', 'Чек-ин состояния', 'Неделя без выгорания'],
@@ -254,21 +294,25 @@ const modules: ModuleCard[] = [
     ),
     branches: [
       {
+        id: 'slang',
         title: 'Сленг',
         subtitle: 'Новые слова и выражения',
         items: ['Что значит новое слово', 'Сленг поколений', 'Как использовать уместно', 'Разбор фраз из соцсетей'],
       },
       {
+        id: 'memes',
         title: 'Мемы',
         subtitle: 'Контекст и происхождение',
         items: ['Откуда мем появился', 'Почему это смешно', 'Как мем стал массовым', 'Словарь мем-культуры'],
       },
       {
+        id: 'digital',
         title: 'Digital-культура',
         subtitle: 'Платформы и форматы',
         items: ['Как работают новые платформы', 'Форматы контента', 'Паттерны внимания', 'Что важно для личного бренда'],
       },
       {
+        id: 'trend-map',
         title: 'Тренд-навигатор',
         subtitle: 'Быстро понять повестку',
         items: ['О чем все говорят', 'Как фильтровать шум', 'Тренды для работы', 'Тренды для учебы и контента'],
@@ -279,22 +323,139 @@ const modules: ModuleCard[] = [
 
 const stats = [
   { value: '24/7', label: 'под рукой' },
-  { value: '6', label: 'ключевых сфер жизни' },
-  { value: '96+', label: 'точек входа в инструкции' },
+  { value: '6', label: 'главных направлений' },
+  { value: '120+', label: 'тем и инструкций' },
 ]
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-zа-я0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function buildGuides(module: ModuleCard, branch: TopicBranch): GuideCard[] {
+  return branch.items.map((item, index) => ({
+    id: `${branch.id}-${index}`,
+    title: item,
+    description: `${module.title}: ${branch.title}. Готовая карточка с последовательностью действий, быстрым чек-листом и шаблонами для старта без пустого экрана.`,
+    checklist: [
+      `Определи точную цель по теме «${item}»`,
+      `Собери исходные данные и ограничения`,
+      `Разбей задачу на 3 ближайших шага`,
+      `Проверь риски, сроки и нужные ресурсы`,
+      `Зафиксируй результат и следующий шаг`,
+    ],
+    templates: [
+      `Шаблон плана: ${item}`,
+      `Чек-лист подготовки: ${branch.title}`,
+      `Краткий сценарий действий на 15 минут`,
+    ],
+  }))
+}
 
 function App() {
   const [theme, setTheme] = useState<ThemeMode>('light')
+  const [view, setView] = useState<ViewMode>('home')
   const [selectedModuleId, setSelectedModuleId] = useState<string>('finance')
+  const [selectedTopicId, setSelectedTopicId] = useState<string>('budget')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
+  const deferredQuery = useDeferredValue(query)
+
   const selectedModule = useMemo(
     () => modules.find((module) => module.id === selectedModuleId) ?? modules[0],
     [selectedModuleId],
   )
+
+  const selectedTopic = useMemo(
+    () => selectedModule.branches.find((branch) => branch.id === selectedTopicId) ?? selectedModule.branches[0],
+    [selectedModule, selectedTopicId],
+  )
+
+  const selectedGuides = useMemo(
+    () => buildGuides(selectedModule, selectedTopic),
+    [selectedModule, selectedTopic],
+  )
+
+  const searchIndex = useMemo<SearchResult[]>(() => {
+    return modules.flatMap((module) => {
+      const moduleResult: SearchResult = {
+        id: `module-${module.id}`,
+        kind: 'module',
+        title: module.title,
+        subtitle: module.subtitle,
+        moduleId: module.id,
+      }
+
+      const topicResults = module.branches.flatMap((branch) => {
+        const topicResult: SearchResult = {
+          id: `topic-${module.id}-${branch.id}`,
+          kind: 'topic',
+          title: branch.title,
+          subtitle: `${module.title} • ${branch.subtitle}`,
+          moduleId: module.id,
+          topicId: branch.id,
+        }
+
+        const guideResults = buildGuides(module, branch).map((guide) => ({
+          id: `guide-${module.id}-${branch.id}-${guide.id}`,
+          kind: 'guide' as const,
+          title: guide.title,
+          subtitle: `${module.title} • ${branch.title}`,
+          moduleId: module.id,
+          topicId: branch.id,
+          guideId: guide.id,
+        }))
+
+        return [topicResult, ...guideResults]
+      })
+
+      return [moduleResult, ...topicResults]
+    })
+  }, [])
+
+  const searchResults = useMemo(() => {
+    const normalized = deferredQuery.trim().toLowerCase()
+    if (!normalized) return []
+
+    return searchIndex
+      .filter((entry) => `${entry.title} ${entry.subtitle}`.toLowerCase().includes(normalized))
+      .slice(0, 8)
+  }, [deferredQuery, searchIndex])
+
+  function openModule(moduleId: string) {
+    const module = modules.find((entry) => entry.id === moduleId)
+    if (!module) return
+
+    setSelectedModuleId(module.id)
+    setSelectedTopicId(module.branches[0].id)
+    setView('module')
+  }
+
+  function openTopic(moduleId: string, topicId: string) {
+    const module = modules.find((entry) => entry.id === moduleId)
+    const topic = module?.branches.find((entry) => entry.id === topicId)
+    if (!module || !topic) return
+
+    setSelectedModuleId(module.id)
+    setSelectedTopicId(topic.id)
+    setView('topic')
+  }
+
+  function applySearchResult(result: SearchResult) {
+    if (result.kind === 'module') {
+      openModule(result.moduleId)
+    } else {
+      openTopic(result.moduleId, result.topicId ?? '')
+    }
+
+    setQuery('')
+  }
 
   return (
     <div className="app-shell">
@@ -307,19 +468,20 @@ function App() {
           </div>
         </div>
 
-        <nav className="sidebar__nav" aria-label="Основная навигация">
-          {modules.map((module) => (
-            <button
-              key={module.id}
-              className={`sidebar__link${selectedModuleId === module.id ? ' is-active' : ''}`}
-              type="button"
-              onClick={() => setSelectedModuleId(module.id)}
-            >
-              <span>{module.navLabel.slice(0, 2)}</span>
-              <span>{module.navLabel}</span>
-            </button>
+        <div className="sidebar__compact">
+          <span className="sidebar__chip">Home</span>
+          <strong>Единый каталог инструкций</strong>
+          <p>Главная, страницы модулей и страницы готовых карточек без раскрытия снизу.</p>
+        </div>
+
+        <div className="sidebar__quickstats">
+          {stats.map((stat) => (
+            <div key={stat.label} className="sidebar__stat">
+              <strong>{stat.value}</strong>
+              <span>{stat.label}</span>
+            </div>
           ))}
-        </nav>
+        </div>
 
         <button
           type="button"
@@ -336,21 +498,48 @@ function App() {
 
       <main className="dashboard">
         <header className="topbar">
-          <a href="/" className="logo">
+          <button type="button" className="logo logo--button" onClick={() => setView('home')}>
             <span className="logo__spark" />
             <span>NeuroLife</span>
-          </a>
+          </button>
 
-          <label className="search">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm9 16-4.2-4.2" />
-            </svg>
-            <input
-              type="search"
-              placeholder="Что нужно сегодня? (как починить кран, план бюджета...)"
-              aria-label="Глобальный поиск"
-            />
-          </label>
+          <div className="search-wrap">
+            <label className="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm9 16-4.2-4.2" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Что нужно сегодня? Поиск по модулям, подтемам и инструкциям"
+                aria-label="Глобальный поиск"
+              />
+            </label>
+
+            {query.trim() ? (
+              <div className="search-results" role="listbox" aria-label="Результаты поиска">
+                {searchResults.length ? (
+                  searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      type="button"
+                      className="search-result"
+                      onClick={() => applySearchResult(result)}
+                    >
+                      <span className={`search-result__kind is-${result.kind}`}>{result.kind}</span>
+                      <div>
+                        <strong>{result.title}</strong>
+                        <p>{result.subtitle}</p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="search-empty">Ничего не найдено. Попробуй другую формулировку.</div>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           <div className="topbar__actions">
             <button type="button" className="icon-button" aria-label="Уведомления">
@@ -366,105 +555,159 @@ function App() {
           </div>
         </header>
 
-        <section className="hero-panel">
-          <div className="hero-panel__copy">
-            <p className="eyebrow">НейроЖизнь 2026</p>
-            <h1>Твой универсальный помощник по жизни</h1>
-            <p className="hero-panel__subheadline">
-              Финансы • Карьера • Образование • Быт • Ментал • Тренды
-            </p>
-            <p className="hero-panel__description">
-              Каждый модуль теперь раскрывается в полноценную карту подтем и практических
-              сценариев, чтобы пользователь мог дойти от общего запроса до почти любой инструкции.
-            </p>
+        {view === 'home' ? (
+          <>
+            <section className="hero-panel">
+              <div className="hero-panel__copy">
+                <p className="eyebrow">НейроЖизнь 2026</p>
+                <h1>Твой универсальный помощник по жизни</h1>
+                <p className="hero-panel__subheadline">
+                  Финансы • Карьера • Образование • Быт • Ментал • Тренды
+                </p>
+                <p className="hero-panel__description">
+                  На главной только основные направления. Дальше каждый блок открывает свою
+                  отдельную страницу с бенто-сеткой подтем, а затем отдельную страницу с готовыми
+                  карточками-инструкциями, чек-листами и шаблонами.
+                </p>
 
-            <div className="hero-panel__metrics" aria-label="Ключевые показатели">
-              {stats.map((stat) => (
-                <div key={stat.label} className="metric-chip">
-                  <strong>{stat.value}</strong>
-                  <span>{stat.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hero-panel__preview" aria-hidden="true">
-            <div className="preview-card preview-card--primary">
-              <span>Сейчас открыт модуль</span>
-              <strong>{selectedModule.title}</strong>
-              <em>{selectedModule.prompt}</em>
-            </div>
-            <div className="preview-card preview-card--secondary">
-              <span>Ветки внутри</span>
-              <strong>{selectedModule.branches.length} направлений</strong>
-            </div>
-            <div className="orb orb--one" />
-            <div className="orb orb--two" />
-          </div>
-        </section>
-
-        <section className="bento-grid" aria-label="Главные модули">
-          {modules.map((module) => (
-            <button
-              key={module.id}
-              className={`module-card ${module.className}${selectedModuleId === module.id ? ' is-selected' : ''}`}
-              type="button"
-              onClick={() => setSelectedModuleId(module.id)}
-            >
-              <div className="module-card__glow" />
-              <div className="module-card__header">
-                {module.icon}
-                <span className="module-card__badge">{module.badge}</span>
-              </div>
-              <div className="module-card__body">
-                <h2>{module.title}</h2>
-                <p className="module-card__subtitle">{module.subtitle}</p>
-                <p className="module-card__description">{module.description}</p>
-                <div className="module-card__microtopics">
-                  {module.branches.slice(0, 3).map((branch) => (
-                    <span key={branch.title}>{branch.title}</span>
+                <div className="hero-panel__metrics" aria-label="Ключевые показатели">
+                  {stats.map((stat) => (
+                    <div key={stat.label} className="metric-chip">
+                      <strong>{stat.value}</strong>
+                      <span>{stat.label}</span>
+                    </div>
                   ))}
                 </div>
               </div>
-            </button>
-          ))}
-        </section>
 
-        <section className="topic-hub">
-          <div className={`topic-hub__intro ${selectedModule.id}`}>
-            <div>
-              <p className="eyebrow">Подтемы</p>
+              <div className="hero-panel__preview" aria-hidden="true">
+                <div className="preview-card preview-card--primary">
+                  <span>Маршрут</span>
+                  <strong>Главный блок → Подтемы → Готовая инструкция</strong>
+                  <em>Переход между уровнями идет как отдельные страницы внутри продукта.</em>
+                </div>
+                <div className="preview-card preview-card--secondary">
+                  <span>Поиск</span>
+                  <strong>Сразу ищет по всему сайту</strong>
+                </div>
+                <div className="orb orb--one" />
+                <div className="orb orb--two" />
+              </div>
+            </section>
+
+            <section className="bento-grid" aria-label="Главные модули">
+              {modules.map((module) => (
+                <button
+                  key={module.id}
+                  className={`module-card ${module.className}`}
+                  type="button"
+                  onClick={() => openModule(module.id)}
+                >
+                  <div className="module-card__glow" />
+                  <div className="module-card__header">
+                    {module.icon}
+                    <span className="module-card__badge">{module.badge}</span>
+                  </div>
+                  <div className="module-card__body">
+                    <h2>{module.title}</h2>
+                    <p className="module-card__subtitle">{module.subtitle}</p>
+                    <p className="module-card__description">{module.description}</p>
+                    <div className="module-card__microtopics">
+                      {module.branches.slice(0, 3).map((branch) => (
+                        <span key={branch.id}>{branch.title}</span>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </section>
+          </>
+        ) : null}
+
+        {view === 'module' ? (
+          <section className="page-shell">
+            <div className={`page-hero ${selectedModule.id}`}>
+              <button type="button" className="back-link" onClick={() => setView('home')}>
+                ← Назад на главную
+              </button>
+              <p className="eyebrow">Раздел</p>
               <h2>{selectedModule.title}</h2>
               <p>{selectedModule.prompt}</p>
             </div>
-            <div className="topic-hub__summary">
-              <span>Разветвленная структура</span>
-              <strong>
-                {selectedModule.branches.reduce((total, branch) => total + branch.items.length, 0)}+
-                {' '}инструкций
-              </strong>
-            </div>
-          </div>
 
-          <div className="topic-grid" aria-label={`Подтемы модуля ${selectedModule.title}`}>
-            {selectedModule.branches.map((branch) => (
-              <button key={branch.title} type="button" className={`topic-card ${selectedModule.id}`}>
-                <div className="topic-card__header">
-                  <div>
-                    <h3>{branch.title}</h3>
-                    <p>{branch.subtitle}</p>
+            <div className="topic-grid page-grid">
+              {selectedModule.branches.map((branch) => (
+                <button
+                  key={branch.id}
+                  type="button"
+                  className={`topic-card ${selectedModule.id}`}
+                  onClick={() => openTopic(selectedModule.id, branch.id)}
+                >
+                  <div className="topic-card__header">
+                    <div>
+                      <h3>{branch.title}</h3>
+                      <p>{branch.subtitle}</p>
+                    </div>
+                    <span>{branch.items.length}</span>
                   </div>
-                  <span>{branch.items.length}</span>
-                </div>
-                <div className="topic-card__list">
-                  {branch.items.map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
+                  <div className="topic-card__list">
+                    {branch.items.map((item) => (
+                      <span key={item}>{item}</span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {view === 'topic' ? (
+          <section className="page-shell">
+            <div className={`page-hero ${selectedModule.id}`}>
+              <div className="page-hero__breadcrumbs">
+                <button type="button" className="back-link" onClick={() => setView('home')}>
+                  Главная
+                </button>
+                <button type="button" className="back-link" onClick={() => setView('module')}>
+                  {selectedModule.title}
+                </button>
+              </div>
+              <p className="eyebrow">Подтема</p>
+              <h2>{selectedTopic.title}</h2>
+              <p>{selectedTopic.subtitle}. Ниже уже не список веток, а готовые карточки-инструкции и шаблоны.</p>
+            </div>
+
+            <div className="guide-grid">
+              {selectedGuides.map((guide) => (
+                <article key={guide.id} className={`guide-card ${selectedModule.id}`}>
+                  <div className="guide-card__head">
+                    <span className="guide-card__eyebrow">Инструкция</span>
+                    <h3>{guide.title}</h3>
+                    <p>{guide.description}</p>
+                  </div>
+
+                  <div className="guide-card__section">
+                    <strong>Чек-лист</strong>
+                    <ul>
+                      {guide.checklist.map((step) => (
+                        <li key={slugify(step)}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="guide-card__section">
+                    <strong>Шаблоны</strong>
+                    <div className="guide-card__templates">
+                      {guide.templates.map((template) => (
+                        <span key={template}>{template}</span>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
 
       <button type="button" className="chat-fab">
