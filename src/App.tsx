@@ -8,10 +8,12 @@ import {
   useLocation,
   useNavigate,
   useParams,
+  useSearchParams,
 } from 'react-router-dom'
 import './App.css'
 
 type ThemeMode = 'light' | 'dark'
+type SearchKind = 'all' | 'module' | 'topic' | 'guide'
 
 type GuideCard = {
   id: string
@@ -43,11 +45,18 @@ type ModuleCard = {
 
 type SearchResult = {
   id: string
-  kind: 'module' | 'topic' | 'guide'
+  kind: Exclude<SearchKind, 'all'>
   title: string
   subtitle: string
   href: string
 }
+
+const filterOptions: { value: SearchKind; label: string }[] = [
+  { value: 'all', label: 'Все' },
+  { value: 'module', label: 'Модули' },
+  { value: 'topic', label: 'Подтемы' },
+  { value: 'guide', label: 'Инструкции' },
+]
 
 function IconShell({ children }: { children: ReactNode }) {
   return (
@@ -225,6 +234,13 @@ function topicHref(moduleId: string, topicId: string) {
   return `/module/${moduleId}/topic/${topicId}`
 }
 
+function searchHref(query: string, filter: SearchKind = 'all') {
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  if (filter !== 'all') params.set('type', filter)
+  return `/search?${params.toString()}`
+}
+
 function buildGuides(module: ModuleCard, branch: TopicBranch): GuideCard[] {
   return branch.items.map((item, index) => ({
     id: `${branch.id}-${index}`,
@@ -251,6 +267,60 @@ function findModule(moduleId?: string) {
 
 function findTopic(module: ModuleCard | undefined, topicId?: string) {
   return module?.branches.find((branch) => branch.id === topicId)
+}
+
+function buildSearchIndex(): SearchResult[] {
+  return modules.flatMap((module) => {
+    const moduleResult: SearchResult = {
+      id: `module-${module.id}`,
+      kind: 'module',
+      title: module.title,
+      subtitle: module.subtitle,
+      href: moduleHref(module.id),
+    }
+
+    const nestedResults = module.branches.flatMap((branch) => {
+      const topicResult: SearchResult = {
+        id: `topic-${module.id}-${branch.id}`,
+        kind: 'topic',
+        title: branch.title,
+        subtitle: `${module.title} • ${branch.subtitle}`,
+        href: topicHref(module.id, branch.id),
+      }
+
+      const guideResults = buildGuides(module, branch).map((guide) => ({
+        id: `guide-${module.id}-${branch.id}-${guide.id}`,
+        kind: 'guide' as const,
+        title: guide.title,
+        subtitle: `${module.title} • ${branch.title}`,
+        href: topicHref(module.id, branch.id),
+      }))
+
+      return [topicResult, ...guideResults]
+    })
+
+    return [moduleResult, ...nestedResults]
+  })
+}
+
+function highlightText(text: string, query: string) {
+  if (!query.trim()) return text
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const parts = text.split(new RegExp(`(${escaped})`, 'ig'))
+  return parts.map((part, index) =>
+    part.toLowerCase() === query.toLowerCase() ? <mark key={`${part}-${index}`}>{part}</mark> : part,
+  )
+}
+
+function filterResults(results: SearchResult[], query: string, filter: SearchKind) {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return []
+
+  return results.filter((entry) => {
+    const matchesType = filter === 'all' || entry.kind === filter
+    const matchesText = `${entry.title} ${entry.subtitle}`.toLowerCase().includes(normalized)
+    return matchesType && matchesText
+  })
 }
 
 function HomePage() {
@@ -287,7 +357,7 @@ function HomePage() {
           </div>
           <div className="preview-card preview-card--secondary">
             <span>Поиск</span>
-            <strong>Сразу ищет по всему сайту</strong>
+            <strong>С отдельной страницей и фильтрами</strong>
           </div>
           <div className="orb orb--one" />
           <div className="orb orb--two" />
@@ -416,63 +486,88 @@ function TopicPage() {
   )
 }
 
+function SearchPage({ searchIndex }: { searchIndex: SearchResult[] }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const filter = (searchParams.get('type') as SearchKind | null) ?? 'all'
+  const results = useMemo(() => filterResults(searchIndex, query, filter), [searchIndex, query, filter])
+
+  return (
+    <section className="page-shell">
+      <div className="page-hero search-page-hero">
+        <Link to="/" className="back-link">
+          ← На главную
+        </Link>
+        <p className="eyebrow">Поиск</p>
+        <h2>Результаты по сайту</h2>
+        <p>
+          Запрос: <strong>{query || 'пусто'}</strong>. Найдено: {results.length}
+        </p>
+      </div>
+
+      <div className="search-filters">
+        {filterOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`filter-chip${filter === option.value ? ' is-active' : ''}`}
+            onClick={() => setSearchParams(query ? { q: query, ...(option.value !== 'all' ? { type: option.value } : {}) } : option.value !== 'all' ? { type: option.value } : {})}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="search-page-results">
+        {results.length ? (
+          results.map((result) => (
+            <Link key={result.id} to={result.href} className={`search-page-card is-${result.kind}`}>
+              <div className="search-page-card__meta">
+                <span className={`search-result__kind is-${result.kind}`}>{result.kind}</span>
+              </div>
+              <h3>{highlightText(result.title, query)}</h3>
+              <p>{highlightText(result.subtitle, query)}</p>
+            </Link>
+          ))
+        ) : (
+          <div className="search-empty search-empty--page">Ничего не найдено. Попробуй сократить запрос или сменить фильтр.</div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function AppShell() {
   const [theme, setTheme] = useState<ThemeMode>('light')
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
   const navigate = useNavigate()
   const location = useLocation()
+  const searchIndex = useMemo(() => buildSearchIndex(), [])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
   useEffect(() => {
-    setQuery('')
+    if (!location.pathname.startsWith('/search')) {
+      setQuery('')
+    }
   }, [location.pathname])
 
-  const searchIndex = useMemo<SearchResult[]>(() => {
-    return modules.flatMap((module) => {
-      const moduleResult: SearchResult = {
-        id: `module-${module.id}`,
-        kind: 'module',
-        title: module.title,
-        subtitle: module.subtitle,
-        href: moduleHref(module.id),
-      }
+  const previewResults = useMemo(() => filterResults(searchIndex, deferredQuery, 'all').slice(0, 6), [searchIndex, deferredQuery])
 
-      const topicResults = module.branches.flatMap((branch) => {
-        const topicResult: SearchResult = {
-          id: `topic-${module.id}-${branch.id}`,
-          kind: 'topic',
-          title: branch.title,
-          subtitle: `${module.title} • ${branch.subtitle}`,
-          href: topicHref(module.id, branch.id),
-        }
+  function openSearchResult(href: string) {
+    navigate(href)
+    setQuery('')
+  }
 
-        const guideResults = buildGuides(module, branch).map((guide) => ({
-          id: `guide-${module.id}-${branch.id}-${guide.id}`,
-          kind: 'guide' as const,
-          title: guide.title,
-          subtitle: `${module.title} • ${branch.title}`,
-          href: topicHref(module.id, branch.id),
-        }))
-
-        return [topicResult, ...guideResults]
-      })
-
-      return [moduleResult, ...topicResults]
-    })
-  }, [])
-
-  const searchResults = useMemo(() => {
-    const normalized = deferredQuery.trim().toLowerCase()
-    if (!normalized) return []
-
-    return searchIndex
-      .filter((entry) => `${entry.title} ${entry.subtitle}`.toLowerCase().includes(normalized))
-      .slice(0, 8)
-  }, [deferredQuery, searchIndex])
+  function submitSearch() {
+    const normalized = query.trim()
+    if (!normalized) return
+    navigate(searchHref(normalized))
+    setQuery('')
+  }
 
   return (
     <div className="app-shell">
@@ -486,9 +581,9 @@ function AppShell() {
         </div>
 
         <div className="sidebar__compact">
-          <span className="sidebar__chip">URL mode</span>
+          <span className="sidebar__chip">Deep search</span>
           <strong>Единый каталог инструкций</strong>
-          <p>Главная, страницы модулей и страницы готовых карточек теперь доступны по отдельным ссылкам.</p>
+          <p>Подтема, модуль и инструкция ищутся сразу. Полные результаты открываются на отдельной странице поиска.</p>
         </div>
 
         <div className="sidebar__quickstats">
@@ -529,28 +624,42 @@ function AppShell() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    submitSearch()
+                  }
+                }}
                 placeholder="Что нужно сегодня? Поиск по модулям, подтемам и инструкциям"
                 aria-label="Глобальный поиск"
               />
+              <button type="button" className="search-submit" onClick={submitSearch}>
+                Найти
+              </button>
             </label>
 
             {query.trim() ? (
               <div className="search-results" role="listbox" aria-label="Результаты поиска">
-                {searchResults.length ? (
-                  searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      type="button"
-                      className="search-result"
-                      onClick={() => navigate(result.href)}
-                    >
-                      <span className={`search-result__kind is-${result.kind}`}>{result.kind}</span>
-                      <div>
-                        <strong>{result.title}</strong>
-                        <p>{result.subtitle}</p>
-                      </div>
+                {previewResults.length ? (
+                  <>
+                    {previewResults.map((result) => (
+                      <button
+                        key={result.id}
+                        type="button"
+                        className="search-result"
+                        onClick={() => openSearchResult(result.href)}
+                      >
+                        <span className={`search-result__kind is-${result.kind}`}>{result.kind}</span>
+                        <div>
+                          <strong>{highlightText(result.title, query)}</strong>
+                          <p>{highlightText(result.subtitle, query)}</p>
+                        </div>
+                      </button>
+                    ))}
+                    <button type="button" className="search-more" onClick={submitSearch}>
+                      Показать все результаты
                     </button>
-                  ))
+                  </>
                 ) : (
                   <div className="search-empty">Ничего не найдено. Попробуй другую формулировку.</div>
                 )}
@@ -576,6 +685,7 @@ function AppShell() {
           <Route path="/" element={<HomePage />} />
           <Route path="/module/:moduleId" element={<ModulePage />} />
           <Route path="/module/:moduleId/topic/:topicId" element={<TopicPage />} />
+          <Route path="/search" element={<SearchPage searchIndex={searchIndex} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

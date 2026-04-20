@@ -202,6 +202,14 @@
   text-decoration: none;
 }
 
+.module-card,
+.topic-card,
+.guide-card,
+.search-page-card,
+.back-link {
+  text-decoration: none;
+}
+
 .logo--button {
   border: 0;
   padding: 0;
@@ -254,6 +262,14 @@
 
 .search input::placeholder {
   color: var(--muted);
+}
+
+.search-submit {
+  border: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #0a84ff, #00c4b4);
 }
 
 .search-results {
@@ -312,6 +328,14 @@
 
 .search-empty {
   padding: 1rem;
+}
+
+.search-more {
+  border: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 18px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.54);
 }
 
 .topbar__actions {
@@ -792,6 +816,73 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.filter-chip {
+  border: 1px solid var(--border);
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.filter-chip.is-active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #0a84ff, #00c4b4);
+}
+
+.search-page-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.search-page-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    border-color 200ms ease;
+}
+
+.search-page-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(10, 132, 255, 0.26);
+  box-shadow: 0 24px 44px rgba(11, 28, 61, 0.14);
+}
+
+.search-page-card h3 {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.search-page-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.search-empty--page {
+  grid-column: 1 / -1;
+}
+
+mark {
+  padding: 0 0.18rem;
+  border-radius: 0.3rem;
+  color: inherit;
+  background: rgba(255, 223, 102, 0.65);
+}
+
 .guide-card {
   display: grid;
   gap: 1rem;
@@ -856,7 +947,8 @@
   .topbar,
   .hero-panel,
   .topic-grid,
-  .guide-grid {
+  .guide-grid,
+  .search-page-results {
     grid-template-columns: 1fr;
   }
 
@@ -884,7 +976,8 @@
 
   .bento-grid,
   .topic-grid,
-  .guide-grid {
+  .guide-grid,
+  .search-page-results {
     grid-template-columns: 1fr;
   }
 
