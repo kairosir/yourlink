@@ -130,6 +130,10 @@
   color: var(--muted);
 }
 
+.sidebar__link-inline {
+  color: var(--text-strong);
+}
+
 .sidebar__quickstats {
   display: grid;
   gap: 0.7rem;

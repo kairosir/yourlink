@@ -1,0 +1,52 @@
+backend:
+  name: github
+  repo: kairosir/yourlink
+  branch: main
+
+local_backend: true
+
+media_folder: "public/uploads"
+public_folder: "/uploads"
+
+site_url: "/"
+display_url: "/"
+logo_url: "/favicon.svg"
+
+collections:
+  - name: "site"
+    label: "Site Content"
+    files:
+      - name: "content"
+        label: "Main Site Content"
+        file: "public/content/site.json"
+        format: "json"
+        fields:
+          - label: "Stats"
+            name: "stats"
+            widget: "list"
+            fields:
+              - { label: "Value", name: "value", widget: "string" }
+              - { label: "Label", name: "label", widget: "string" }
+          - label: "Modules"
+            name: "modules"
+            widget: "list"
+            summary: "{{fields.title}}"
+            fields:
+              - { label: "ID", name: "id", widget: "string" }
+              - { label: "Title", name: "title", widget: "string" }
+              - { label: "Subtitle", name: "subtitle", widget: "string" }
+              - { label: "Description", name: "description", widget: "text" }
+              - { label: "Badge", name: "badge", widget: "string" }
+              - { label: "Prompt", name: "prompt", widget: "text" }
+              - label: "Topics"
+                name: "branches"
+                widget: "list"
+                summary: "{{fields.title}}"
+                fields:
+                  - { label: "ID", name: "id", widget: "string" }
+                  - { label: "Title", name: "title", widget: "string" }
+                  - { label: "Subtitle", name: "subtitle", widget: "string" }
+                  - label: "Instruction Titles"
+                    name: "items"
+                    widget: "list"
+                    field: { label: "Instruction", name: "item", widget: "string" }
