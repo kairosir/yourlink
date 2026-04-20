@@ -14,6 +14,7 @@ import './App.css'
 
 type ThemeMode = 'light' | 'dark'
 type SearchKind = 'all' | 'module' | 'topic' | 'guide'
+type AuthMode = 'login' | 'register'
 
 type Stat = {
   value: string
@@ -40,6 +41,12 @@ type ModuleContent = {
 type SiteContent = {
   stats: Stat[]
   modules: ModuleContent[]
+}
+
+type AuthUser = {
+  name: string
+  email: string
+  password: string
 }
 
 type GuideCard = {
@@ -75,6 +82,9 @@ const filterOptions: { value: SearchKind; label: string }[] = [
   { value: 'topic', label: 'Подтемы' },
   { value: 'guide', label: 'Инструкции' },
 ]
+
+const AUTH_USERS_KEY = 'neurolife-auth-users'
+const AUTH_SESSION_KEY = 'neurolife-auth-session'
 
 function IconShell({ children }: { children: ReactNode }) {
   return (
@@ -177,6 +187,38 @@ function searchHref(query: string, filter: SearchKind = 'all') {
   if (query) params.set('q', query)
   if (filter !== 'all') params.set('type', filter)
   return `/search?${params.toString()}`
+}
+
+function readUsers(): AuthUser[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(AUTH_USERS_KEY)
+    return raw ? (JSON.parse(raw) as AuthUser[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeUsers(users: AuthUser[]) {
+  window.localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users))
+}
+
+function readSession(): AuthUser | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_KEY)
+    return raw ? (JSON.parse(raw) as AuthUser) : null
+  } catch {
+    return null
+  }
+}
+
+function writeSession(user: AuthUser | null) {
+  if (user) {
+    window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user))
+    return
+  }
+  window.localStorage.removeItem(AUTH_SESSION_KEY)
 }
 
 function getModuleVisual(moduleId: string) {
@@ -623,6 +665,128 @@ function SearchPage({ searchIndex }: { searchIndex: SearchResult[] }) {
   )
 }
 
+function AuthPage({
+  currentUser,
+  onLogin,
+  onRegister,
+}: {
+  currentUser: AuthUser | null
+  onLogin: (email: string, password: string) => { ok: boolean; message: string }
+  onRegister: (payload: AuthUser) => { ok: boolean; message: string }
+}) {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [mode, setMode] = useState<AuthMode>(searchParams.get('mode') === 'register' ? 'register' : 'login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    setMode(searchParams.get('mode') === 'register' ? 'register' : 'login')
+  }, [searchParams])
+
+  if (currentUser) {
+    return (
+      <section className="page-shell">
+        <div className="page-hero auth-page">
+          <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Аккаунт' }]} />
+          <p className="eyebrow">Профиль</p>
+          <h2>Ты уже вошел в систему</h2>
+          <p>
+            Аккаунт: <strong>{currentUser.name}</strong> ({currentUser.email})
+          </p>
+          <div className="auth-page__actions">
+            <button type="button" className="filter-chip is-active" onClick={() => navigate('/')}>
+              Перейти на главную
+            </button>
+            <a href="/admin/" className="filter-chip">
+              Открыть CMS
+            </a>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (mode === 'login') {
+      const result = onLogin(email.trim(), password)
+      setMessage(result.message)
+      if (result.ok) navigate('/')
+      return
+    }
+
+    const result = onRegister({
+      name: name.trim(),
+      email: email.trim(),
+      password,
+    })
+    setMessage(result.message)
+    if (result.ok) navigate('/')
+  }
+
+  return (
+    <section className="page-shell">
+      <div className="page-hero auth-page">
+        <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: mode === 'login' ? 'Вход' : 'Регистрация' }]} />
+        <p className="eyebrow">Auth</p>
+        <h2>{mode === 'login' ? 'Вход в NeuroLife' : 'Регистрация в NeuroLife'}</h2>
+        <p>Это простая локальная авторизация для текущего прототипа. Данные хранятся только в браузере.</p>
+      </div>
+
+      <div className="auth-layout">
+        <form className="auth-card" onSubmit={handleSubmit}>
+          <div className="search-filters">
+            <button type="button" className={`filter-chip${mode === 'login' ? ' is-active' : ''}`} onClick={() => setMode('login')}>
+              Вход
+            </button>
+            <button type="button" className={`filter-chip${mode === 'register' ? ' is-active' : ''}`} onClick={() => setMode('register')}>
+              Регистрация
+            </button>
+          </div>
+
+          {mode === 'register' ? (
+            <label className="auth-field">
+              <span>Имя</span>
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Nika" required />
+            </label>
+          ) : null}
+
+          <label className="auth-field">
+            <span>Email</span>
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+          </label>
+
+          <label className="auth-field">
+            <span>Пароль</span>
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Минимум 4 символа" required />
+          </label>
+
+          {message ? <div className="auth-message">{message}</div> : null}
+
+          <button type="submit" className="auth-submit">
+            {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+          </button>
+        </form>
+
+        <aside className="auth-sidecard">
+          <span className="guide-card__eyebrow">Demo mode</span>
+          <h3>Что это за auth сейчас</h3>
+          <p>Пока это только клиентская регистрация и вход без сервера, шифрования и базы данных.</p>
+          <ul>
+            <li>Подходит для прототипа и тестирования UX</li>
+            <li>Не подходит для реального продакшена</li>
+            <li>Следующий шаг: backend + JWT/session + нормальная защита</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+  )
+}
+
 function ContentStatus({ error }: { error: string | null }) {
   return (
     <section className="page-shell">
@@ -640,6 +804,7 @@ function AppShell() {
   const [query, setQuery] = useState('')
   const [content, setContent] = useState<SiteContent | null>(null)
   const [contentError, setContentError] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const deferredQuery = useDeferredValue(query)
   const navigate = useNavigate()
   const location = useLocation()
@@ -647,6 +812,10 @@ function AppShell() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    setCurrentUser(readSession())
+  }, [])
 
   useEffect(() => {
     if (!location.pathname.startsWith('/search')) setQuery('')
@@ -691,6 +860,40 @@ function AppShell() {
     setQuery('')
   }
 
+  function handleRegister(payload: AuthUser) {
+    if (!payload.name || !payload.email || payload.password.length < 4) {
+      return { ok: false, message: 'Заполни имя, email и пароль минимум из 4 символов.' }
+    }
+
+    const users = readUsers()
+    const exists = users.some((user) => user.email.toLowerCase() === payload.email.toLowerCase())
+    if (exists) return { ok: false, message: 'Пользователь с таким email уже существует.' }
+
+    const nextUsers = [...users, payload]
+    writeUsers(nextUsers)
+    writeSession(payload)
+    setCurrentUser(payload)
+    return { ok: true, message: 'Аккаунт создан. Ты уже вошел в систему.' }
+  }
+
+  function handleLogin(email: string, password: string) {
+    const user = readUsers().find(
+      (entry) => entry.email.toLowerCase() === email.toLowerCase() && entry.password === password,
+    )
+
+    if (!user) return { ok: false, message: 'Неверный email или пароль.' }
+
+    writeSession(user)
+    setCurrentUser(user)
+    return { ok: true, message: 'Вход выполнен.' }
+  }
+
+  function handleLogout() {
+    writeSession(null)
+    setCurrentUser(null)
+    navigate('/')
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -707,7 +910,8 @@ function AppShell() {
           <strong>Контент отдельно от кода</strong>
           <p>
             Основной источник данных: `/content/site.json`. Админка для редактирования:
-            {' '}<a href="/admin/" className="sidebar__link-inline">/admin</a>
+            {' '}
+            {currentUser ? <a href="/admin/" className="sidebar__link-inline">/admin</a> : <Link to="/auth?mode=login" className="sidebar__link-inline">вход в CMS</Link>}
           </p>
         </div>
 
@@ -793,6 +997,15 @@ function AppShell() {
           </div>
 
           <div className="topbar__actions">
+            {currentUser ? (
+              <button type="button" className="auth-pill" onClick={handleLogout}>
+                {currentUser.name} · Выйти
+              </button>
+            ) : (
+              <Link to="/auth?mode=login" className="auth-pill">
+                Вход / Регистрация
+              </Link>
+            )}
             <button type="button" className="icon-button" aria-label="Уведомления">
               <span className="notification-dot" />
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -813,11 +1026,12 @@ function AppShell() {
             <Route path="/" element={<HomePage stats={content.stats} modules={content.modules} />} />
             <Route path="/module/:moduleId" element={<ModulePage modules={content.modules} />} />
             <Route path="/module/:moduleId/topic/:topicId" element={<TopicPage modules={content.modules} />} />
-            <Route path="/module/:moduleId/topic/:topicId/guide/:guideId" element={<GuidePage modules={content.modules} />} />
-            <Route path="/search" element={<SearchPage searchIndex={searchIndex} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        )}
+          <Route path="/module/:moduleId/topic/:topicId/guide/:guideId" element={<GuidePage modules={content.modules} />} />
+          <Route path="/search" element={<SearchPage searchIndex={searchIndex} />} />
+          <Route path="/auth" element={<AuthPage currentUser={currentUser} onLogin={handleLogin} onRegister={handleRegister} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      )}
       </main>
 
       <button type="button" className="chat-fab">

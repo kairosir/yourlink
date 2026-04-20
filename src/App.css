@@ -371,6 +371,19 @@
   gap: 0.75rem;
 }
 
+.auth-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-strong);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.56);
+}
+
 .icon-button,
 .avatar {
   width: 3rem;
@@ -1037,6 +1050,109 @@
   gap: 1rem;
 }
 
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
+  gap: 1rem;
+}
+
+.auth-card,
+.auth-sidecard {
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.auth-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-field span,
+.auth-sidecard h3 {
+  color: var(--text-strong);
+}
+
+.auth-field input {
+  min-height: 3rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.auth-message {
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.auth-submit {
+  min-height: 3.1rem;
+  border: 0;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #0a84ff, #00c4b4);
+}
+
+.auth-sidecard {
+  display: grid;
+  gap: 0.8rem;
+  align-self: start;
+  padding: 1.2rem;
+}
+
+.auth-sidecard p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.auth-sidecard ul {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.auth-sidecard li {
+  position: relative;
+  padding: 0.7rem 0.85rem 0.7rem 1.8rem;
+  border-radius: 16px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.auth-sidecard li::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.8rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0a84ff, #00c4b4);
+  transform: translateY(-50%);
+}
+
+.auth-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+
 .search-page-card {
   display: grid;
   gap: 0.8rem;
@@ -1145,7 +1261,8 @@ mark {
   .guide-grid,
   .search-page-results,
   .instruction-layout,
-  .instruction-page__hero {
+  .instruction-page__hero,
+  .auth-layout {
     grid-template-columns: 1fr;
   }
 
